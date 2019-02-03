@@ -61,5 +61,14 @@ func main()  {
 		log.Fatalf("Unexpected error while creating blog: %v", err)
 	}
 	fmt.Printf("Blog has been updated: %v\n", updateBlogRes)
+
+	// delete Blog
+	deleteRes, err := c.DeleteBlog(context.Background(), &blogpb.DeleteBlogRequest{BlogId: createBlogRes.GetBlog().GetId()})
+
+	if err != nil {
+		fmt.Printf("Error happened while deleting: %v\n", err)
+	}
+
+	fmt.Printf("Blog has been deleted %v\n", deleteRes)
 }
 
