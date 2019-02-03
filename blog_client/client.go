@@ -47,5 +47,19 @@ func main()  {
 	}
 
 	fmt.Printf("Blog was read: %v", readBlogRes)
+
+	// update Blog
+	fmt.Println("Createing the blog")
+	updatedBlog := &blogpb.Blog{
+		Id: createBlogRes.GetBlog().GetId(),
+		AuthorId: "abc",
+		Title: "My first blog(updated)",
+		Content: "Content of the first blog(updated)",
+	}
+	updateBlogRes, err := c.UpdateBlog(context.Background(), &blogpb.UpdateBlogRequest{Blog: updatedBlog})
+	if err != nil {
+		log.Fatalf("Unexpected error while creating blog: %v", err)
+	}
+	fmt.Printf("Blog has been updated: %v\n", updateBlogRes)
 }
 
