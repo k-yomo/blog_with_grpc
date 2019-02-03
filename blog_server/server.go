@@ -6,6 +6,7 @@ import (
 	"github.com/k-yomo/blog_with_grpc/blogpb"
 	"github.com/mongodb/mongo-go-driver/bson/primitive"
 	"github.com/mongodb/mongo-go-driver/mongo"
+	"github.com/mongodb/mongo-go-driver/x/bsonx"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -103,15 +104,6 @@ func (*server) UpdateBlog(ctx context.Context, req *blogpb.UpdateBlogRequest) (*
 	return &blogpb.UpdateBlogResponse{Blog: data.toBlogPb()}, nil
 }
 
-func (b *blogItem) toBlogPb() *blogpb.Blog {
-	return &blogpb.Blog{
-		Id:       b.ID.Hex(),
-		AuthorId: b.AuthorID,
-		Title:    b.Title,
-		Content:  b.Content,
-	}
-}
-
 func (*server) DeleteBlog(ctx context.Context, req *blogpb.DeleteBlogRequest) (*blogpb.DeleteBlogResponse, error) {
 	fmt.Println("Update blog request")
 	oid, err := primitive.ObjectIDFromHex(req.GetBlogId())
@@ -130,6 +122,38 @@ func (*server) DeleteBlog(ctx context.Context, req *blogpb.DeleteBlogRequest) (*
 	}
 
 	return &blogpb.DeleteBlogResponse{BlogId: req.GetBlogId()}, nil
+}
+
+func (*server) ListBlog(req *blogpb.ListBlogRequest, stream blogpb.BlogService_ListBlogServer) error {
+	fmt.Println("List blog request")
+	cursor, err := collection.Find(context.Background(), bsonx.Doc{})
+	if err != nil {
+		return status.Errorf(codes.Internal, fmt.Sprintf("unknown internal error: %v", err))
+	}
+	defer cursor.Close(context.Background())
+
+	for cursor.Next(context.Background()) {
+		blogItem := &blogItem{}
+		err := cursor.Decode(blogItem)
+		if err != nil {
+			return status.Errorf(codes.Internal, fmt.Sprintf("Error while decoding data from MongoDB: %v", err))
+		}
+		stream.Send(&blogpb.ListBlogResponse{Blog: blogItem.toBlogPb()})
+	}
+	if err := cursor.Err(); err != nil {
+		return status.Errorf(codes.Internal, fmt.Sprintf("Unknown internal error: %v", err))
+	}
+
+	return nil
+}
+
+func (b *blogItem) toBlogPb() *blogpb.Blog {
+	return &blogpb.Blog{
+		Id:       b.ID.Hex(),
+		AuthorId: b.AuthorID,
+		Title:    b.Title,
+		Content:  b.Content,
+	}
 }
 
 func main() {
